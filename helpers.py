@@ -58,3 +58,17 @@ def get_unique_operatory_names():
 
 	return sorted(unique_names) 
 
+def get_provider_id(name):
+	return 1
+
+def get_operatory_id(name):
+	return 2
+
+def get_provider_availability(id):
+	return [10,20,30]
+
+def get_operatory_availability(id):
+	return [15,25,35,45]
+
+def next_seven_days():
+	return [1,2,3,4,5,6,7]

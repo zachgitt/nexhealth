@@ -8,7 +8,11 @@
 	<h2>{{ selection }}</h2>
 	<ul style="list-style-type:none;">
 	  {% for name in names %}	
-	    <li><button type="button" value={{name}}>{{ name }}</button></li>
+	    <li>
+		  <a href="{{ url_for('availability', name=name, selection=selection, length=length) }}">
+		    <button type="button" value={{name}}>{{ name }}</button>
+          </a>
+        </li>
 	  {% endfor %}
 	</ul>
   </body>

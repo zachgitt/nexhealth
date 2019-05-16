@@ -1,0 +1,35 @@
+<html>
+		
+  <head>
+    <title>Nexhealth Appointments</title>
+  </head>
+
+  <body>
+	<h2>Availability</h2>
+	<p>{{ name }}</p>
+	<table border=1 style="width:100%">
+	  <tr>
+		{% for day in days %}
+		  <th>{{ day }}</th>
+		{% endfor %}
+	  </tr>
+		{% for day, day_availability in zip(days, availability) %}
+		  <td>
+		    <ul style="list-style-type:none;">
+		      {% for time in day_availability %}
+			    <li>
+ 				  <a href="{{ url_for('confirmation', name=name, day=day, time=time) }}">
+					<button type="button">{{ time }}</button>
+                  </a>
+                </li>
+			  {% endfor %}	
+		    </ul>
+		  </td>
+		{% endfor %}
+	  </tr>
+
+	  </tr>
+	</table>
+  </body>
+
+</html>
