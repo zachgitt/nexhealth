@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, abort
+from helpers import get_unique_provider_names, get_unique_operatory_names
+
 app = Flask(__name__)
 
 
@@ -20,10 +22,13 @@ def list():
 		abort(400, 'Uh oh, the schedule length must be between 5 and 60 and a 5 minute interval.')
 
 	# display list of names
-	names = ['a', 'wanda']
-	
+	names = []
+	if selection == 'providers':
+		names = get_unique_provider_names()
+	else:
+		names = get_unique_operatory_names()
 
-	return render_template('list.html', names=names)
+	return render_template('list.html', selection=selection.capitalize(), names=names)
 
 if __name__ == '__main__':
 	app.run(debug=True, host='0.0.0.0')
