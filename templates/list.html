@@ -6,9 +6,11 @@
 
   <body>
 	<h2>{{ selection }}</h2>
-	{% for name in names %}
-		<button type="button" value={{name}}>{{ name }}</button>
-	{% endfor %}
+	<ul style="list-style-type:none;">
+	  {% for name in names %}	
+	    <li><button type="button" value={{name}}>{{ name }}</button></li>
+	  {% endfor %}
+	</ul>
   </body>
 
 </html>
