@@ -5,7 +5,8 @@ app = Flask(__name__)
 app.jinja_env.globals.update(zip=zip) 
 
 @app.route('/')
-def main():
+@app.route('/select')
+def select():
 	return render_template('select.html')
 
 @app.route('/list', methods=['POST'])
