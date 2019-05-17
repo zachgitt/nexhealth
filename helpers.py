@@ -68,39 +68,59 @@ def get_unique_operatory_names():
     return sorted(unique_names)
 
 def parse_hour(timestamp):
-	return timestamp:split('T')[1][:2]	
+    return timestamp.split('T')[1][:2]
+
+def overlapping(date, appointments):
+    return False
 
 def get_provider_availability(name, weekday_month_days):
 
-	# save next 7 weekdays
-	weekdays = []
-	for weekday_month_day in weekday_month_days:
-		weekdays.append(weekday_month_day.split(' ')[0]
-	
-	# initialize availability to (0,0)
-	weekdays_availability = {}
-	for weekday in weekdays:
-		weekdays_availability[weekday] = (0,0)
+    # save next 7 weekdays
+    weekdays = []
+    for weekday_month_day in weekday_month_days:
+        weekdays.append(weekday_month_day.split(' ')[0])
 
-	# update availability to working hours
+    # initialize availability to (0,0)
+    weekday_availability = {}
+    for weekday in weekdays:
+        weekday_availability[weekday] = (0,0)
+
+    # update availability to working hours
     response = http_request_providers()
-	for provider in response['data']:
-		# only save this providers working hours
-		if provider == id:
-			for working_hour in provider['working_hours']:
-				weekdays_availability[working_hour['day']] = (parse_hour(working_hour['begin_time']), parse_hour(working_hour['end_time']))
+    for provider in response['data']:
+        # only save this providers working hours
+        if provider == id:
+            for working_hour in provider['working_hours']:
+                weekday_availability[working_hour['day']] = (parse_hour(working_hour['begin_time']), parse_hour(working_hour['end_time']))
 
-	# subtract appointments from availability
-	response = http_request_appointments()
-	for appointment in response['data']:
-		if appointment['provider_name'] == name:
-			pass		
+    # save appointments
+    appointments = []
+    response = http_request_appointments()
+    for appointment in response['data']:
+        if appointment['provider_name'] == name:
+            appointments.append((appointment['start_time'], appointment['end_time']))
 
-    return [10, 20, 30]
+    # save next 7 days availability at 5 minute intervals (2016 calculations)
+    week_availability = []
+    for i, weekday in enumerate(weekdays):
+
+        day_availability = []
+        for hour in range(24):
+            # within working hours
+            if weekday_availability[weekday][0] <= hour <= weekday_availability[weekday][1]:
+                for k in range(0,60,5):
+                    # overlapping appointment
+                    if not overlapping(datetime.today()+timedelta(days=i), appointments):
+                        day_availability.append(str(hour) + str(k))
+
+        week_availability.append(day_availability)
+
+
+    return week_availability 
 
 
 def get_operatory_availability(name, weekday_month_days):
-    return [15, 25, 35, 45]
+    return [[15, 25, 35, 45], [2,2], [], [8,18,28], [], [1,2,3,4,5], [100]]
 
 
 # NOTE: python enum 0=Monday

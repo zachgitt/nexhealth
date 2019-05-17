@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, abort
-from helpers import get_unique_provider_names, get_unique_operatory_names, get_provider_id, get_operatory_id, get_provider_availability, get_operatory_availability, next_seven_days
+from helpers import get_unique_provider_names, get_unique_operatory_names, get_provider_availability, get_operatory_availability, next_seven_days
 
 app = Flask(__name__)
 app.jinja_env.globals.update(zip=zip) 
@@ -50,8 +50,6 @@ def availability():
 		availability = get_provider_availability(name, days)
 	else:
 		availability = get_operatory_availability(name, days)
-	
-	availability = [[1,11,111], [22], [3,33], [], [5,55], [6,66], [7,77]]
 
 	return render_template('availability.html', name=name, days=days, availability=availability)
 
