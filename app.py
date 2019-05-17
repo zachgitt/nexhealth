@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, abort
 from helpers import get_unique_provider_names, get_unique_operatory_names, get_provider_availability, get_operatory_availability, next_seven_days
+from validate import validate_selection, validate_name, validate_length
 
 app = Flask(__name__)
 app.jinja_env.globals.update(zip=zip) 
@@ -17,10 +18,8 @@ def list():
 	length = int(request.form.get('length'))
 
 	# validate inputs
-	if selection not in ['providers', 'operatories']:
-		abort(400, 'Please select providers or operatories to search!')
-	if (length % 5 != 0) or (length < 5) or (60 < length):
-		abort(400, 'Uh oh, the schedule length must be between 5 and 60 and a 5 minute interval.')
+	validate_selection(selection)
+	validate_length(length)
 
 	# display list of names
 	names = []
@@ -37,11 +36,12 @@ def availability():
 	# parse input
 	selection = request.args.get('selection').lower()
 	name = request.args.get('name')
-	length = request.args.get('length')
+	length = int(request.args.get('length'))
 
 	# validate input
-	if selection not in ['providers', 'operatories']:
-		abort(400, 'Please select providers or operatories to search!')
+	validate_selection(selection)
+	validate_length(length)
+	validate_name(name)
 
 	# get availability
 	days = next_seven_days()
@@ -61,6 +61,8 @@ def confirmation():
 	name = request.args.get('name')
 	day = request.args.get('day')
 	time = request.args.get('time')
+	
+	# TODO: validate inputs
 
 	return render_template('confirmation.html', name=name, day=day, time=time) 
 
