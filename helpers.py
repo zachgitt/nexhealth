@@ -73,7 +73,7 @@ def parse_hour(timestamp):
 def overlapping(date, appointments):
     return False
 
-def get_provider_availability(name, weekday_month_days):
+def get_provider_availability(name, weekday_month_days, length):
 
     # save next 7 weekdays
     weekdays = []
@@ -119,7 +119,7 @@ def get_provider_availability(name, weekday_month_days):
     return week_availability 
 
 
-def get_operatory_availability(name, weekday_month_days):
+def get_operatory_availability(name, weekday_month_days, length):
     return [[15, 25, 35, 45], [2,2], [], [8,18,28], [], [1,2,3,4,5], [100]]
 
 

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, abort
+from flask import Flask, render_template, request
 from helpers import get_unique_provider_names, get_unique_operatory_names, get_provider_availability, get_operatory_availability, next_seven_days
 from validate import validate_selection, validate_name, validate_length
 
@@ -15,7 +15,7 @@ def list():
 
 	# parse input
 	selection = request.form.get('selection')
-	length = int(request.form.get('length'))
+	length = request.form.get('length')
 
 	# validate inputs
 	validate_selection(selection)
@@ -28,7 +28,7 @@ def list():
 	else:
 		names = get_unique_operatory_names()
 
-	return render_template('list.html', selection=selection.capitalize(), names=names, length=length)
+	return render_template('list.html', selection=selection.capitalize(), names=names, length=int(length))
 
 @app.route('/availability')
 def availability():
@@ -36,7 +36,7 @@ def availability():
 	# parse input
 	selection = request.args.get('selection').lower()
 	name = request.args.get('name')
-	length = int(request.args.get('length'))
+	length = request.args.get('length')
 
 	# validate input
 	validate_selection(selection)
@@ -47,9 +47,9 @@ def availability():
 	days = next_seven_days()
 	availability = [[]]
 	if selection == 'providers':
-		availability = get_provider_availability(name, days)
+		availability = get_provider_availability(name, days, int(length))
 	else:
-		availability = get_operatory_availability(name, days)
+		availability = get_operatory_availability(name, days, int(length))
 
 	return render_template('availability.html', name=name, days=days, availability=availability)
 
