@@ -44,15 +44,13 @@ def availability():
 		abort(400, 'Please select providers or operatories to search!')
 
 	# get availability
+	days = next_seven_days()
 	availability = [[]]
 	if selection == 'providers':
-		id = get_provider_id(name)	
-		availability = get_provider_availability(id)
+		availability = get_provider_availability(name, days)
 	else:
-		id = get_operatory_id(name)
-		availability = get_operatory_availability(id)
+		availability = get_operatory_availability(name, days)
 	
-	days = next_seven_days()
 	availability = [[1,11,111], [22], [3,33], [], [5,55], [6,66], [7,77]]
 
 	return render_template('availability.html', name=name, days=days, availability=availability)
