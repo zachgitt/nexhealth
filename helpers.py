@@ -1,5 +1,5 @@
 import requests
-from datetime import datetime, timedelta
+import datetime as dt
 
 
 def http_request_appointments():
@@ -67,60 +67,91 @@ def get_unique_operatory_names():
 
     return sorted(unique_names)
 
-def parse_hour(timestamp):
-    return timestamp.split('T')[1][:2]
 
-def overlapping(date, appointments):
+def parse_hour(timestamp):
+    return int(timestamp.split('T')[1][:2])
+
+
+def parse_time(timestamp):
+    return timestamp.split('T')[1][:5]
+
+
+def appointment_date(appointment):
+    timestamp = appointment['start_time']
+    date = timestamp.split('T')[0]
+    year, month, day = date.split('-')
+    appt = dt.datetime(int(year), int(month), int(day))
+    return appt.date()
+
+
+def within_week(appointment):
+    appt = appointment_date(appointment)
+    now = dt.datetime.now().date()
+    next_week = now + dt.timedelta(days=7)
+
+    if now <= appt < next_week:
+        return True
     return False
 
+
+def appointment_index(appointment):
+    appt = appointment_date(appointment)
+    delta = appt - dt.datetime.now().date()
+    return delta.days
+
+
+# method is a bit roundabout due to python timestamp nuances 
+def time_plus_duration(time, duration):
+    assert (5 <= duration <= 60)
+    future = dt.datetime.combine(dt.datetime.now(), time) + dt.timedelta(minutes=duration)
+    return future.time()
+
+
 def get_provider_availability(name, weekday_month_days, length):
-
     # save next 7 weekdays
-    weekdays = []
-    for weekday_month_day in weekday_month_days:
-        weekdays.append(weekday_month_day.split(' ')[0])
+    weekdays = [date.split(' ')[0] for date in weekday_month_days]
 
-    # initialize availability to (0,0)
-    weekday_availability = {}
-    for weekday in weekdays:
-        weekday_availability[weekday] = (0,0)
-
-    # update availability to working hours
+    # save working hours, initialy (0,0)
+    working_hours = {weekday: (0, 0) for weekday in weekdays}
     response = http_request_providers()
     for provider in response['data']:
         # only save this providers working hours
-        if provider == id:
+        if provider['name'] == name:
             for working_hour in provider['working_hours']:
-                weekday_availability[working_hour['day']] = (parse_hour(working_hour['begin_time']), parse_hour(working_hour['end_time']))
+                working_hours[working_hour['day']] = (
+                    parse_hour(working_hour['begin_time']),
+                    parse_hour(working_hour['end_time']))
 
-    # save appointments
-    appointments = []
+    # save week appointments
+    week_appointments = [[] for i in range(7)]
     response = http_request_appointments()
     for appointment in response['data']:
-        if appointment['provider_name'] == name:
-            appointments.append((appointment['start_time'], appointment['end_time']))
+        if appointment['provider_name'] == name and within_week(appointment):
+            index = appointment_index(appointment)
+            week_appointments[index].append((
+                parse_time(appointment['start_time']),
+                parse_time(appointment['end_time'])
+            ))
 
-    # save next 7 days availability at 5 minute intervals (2016 calculations)
+    # save next 7 days availability at defined interval lengths
     week_availability = []
     for i, weekday in enumerate(weekdays):
 
+        # within working hours
         day_availability = []
-        for hour in range(24):
-            # within working hours
-            if weekday_availability[weekday][0] <= hour <= weekday_availability[weekday][1]:
-                for k in range(0,60,5):
-                    # overlapping appointment
-                    if not overlapping(datetime.today()+timedelta(days=i), appointments):
-                        day_availability.append(str(hour) + str(k))
+        time = dt.time(working_hours[weekday][0], 0)
+        end = dt.time(working_hours[weekday][1], 0)
+        while time < end:
+            day_availability.append(str(time.hour) + ':' + str(time.minute).zfill(2))
+            time = time_plus_duration(time, length)
 
         week_availability.append(day_availability)
 
-
-    return week_availability 
+    return week_availability
 
 
 def get_operatory_availability(name, weekday_month_days, length):
-    return [[15, 25, 35, 45], [2,2], [], [8,18,28], [], [1,2,3,4,5], [100]]
+    return [[15, 25, 35, 45], [2, 2], [], [8, 18, 28], [], [1, 2, 3, 4, 5], [100]]
 
 
 # NOTE: python enum 0=Monday
@@ -158,7 +189,7 @@ def month_int_to_string(integer):
 def next_seven_days():
     days = []
     for i in range(7):
-        date = datetime.today() + timedelta(days=i)
+        date = dt.datetime.today() + dt.timedelta(days=i)
         day = date.day
         month = month_int_to_string(date.month)
         weekday = weekday_int_to_string(date.weekday())
