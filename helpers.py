@@ -3,6 +3,13 @@ import datetime as dt
 
 
 def http_request_appointments():
+    today = dt.datetime.today()
+    next_week = today + dt.timedelta(days=7)
+    start = str(today.year) + '-' + str(today.month) + '-' + str(
+        today.day) + 'T00:00:00.000Z'
+    end = str(today.year) + '-' + str(today.month) + '-' + str(
+        next_week.day) + 'T00:00:00.000Z'
+
     headers = {
         'Accept': 'application/vnd.Nexhealth+json; version=1',
         'Referer': 'https://www.nexhealth.com/app/calendar',
@@ -13,13 +20,13 @@ def http_request_appointments():
     }
     params = (
         ('cancelled', 'false'),
-        ('end', '2019-05-19T00:00:00.000Z'),
+        ('end', end),
         ('location_id', '75'),
         ('nex_only', 'false'),
         ('provider_ids[]',
          ['415815', '417237', '416056', '417240', '417241', '415814', '415827', '415858',
           '417239']),
-        ('start', '2019-05-12T00:00:00.000Z'),
+        ('start', start),
         ('subdomain', 'test'),
     )
     response = requests.get('https://nexhealth.info/appointments', headers=headers,
@@ -107,7 +114,27 @@ def time_plus_duration(time, duration):
     return future.time()
 
 
+# converts '09:30' to datetime
+def str_to_time(str):
+    hr, min = str.split(':')
+    return dt.time(int(hr), int(min))
+
+
+# find if time overlaps with an appointment
+# linear solution, but can be done in O(logn) with binary search
+def overlapping_appointment(time, appointments):
+    for idx, appointment in enumerate(appointments):
+        start = str_to_time(appointment[0])
+        end = str_to_time(appointment[1])
+        if start <= time < end:
+            return idx
+
+    # overlap not found
+    return None
+
+
 def get_provider_availability(name, weekday_month_days, length):
+
     # save next 7 weekdays
     weekdays = [date.split(' ')[0] for date in weekday_month_days]
 
@@ -139,11 +166,19 @@ def get_provider_availability(name, weekday_month_days, length):
 
         # within working hours
         day_availability = []
+        day_appointments = week_appointments[i]
         time = dt.time(working_hours[weekday][0], 0)
         end = dt.time(working_hours[weekday][1], 0)
         while time < end:
-            day_availability.append(str(time.hour) + ':' + str(time.minute).zfill(2))
-            time = time_plus_duration(time, length)
+
+            # check time doesn't overlap with appointments
+            overlapping_idx = overlapping_appointment(time, day_appointments)
+            if overlapping_idx is not None:
+                time = str_to_time(day_appointments[overlapping_idx][1])
+
+            else:
+                day_availability.append(str(time.hour) + ':' + str(time.minute).zfill(2))
+                time = time_plus_duration(time, length)
 
         week_availability.append(day_availability)
 
