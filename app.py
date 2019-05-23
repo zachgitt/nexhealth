@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request
-from helpers import get_unique_provider_names, get_unique_operatory_names, \
-    get_provider_availability, get_operatory_availability, next_seven_days
+from helpers import (
+    get_unique_provider_names, get_unique_operatory_names, get_availability,
+    next_seven_dates, parse_weekdays
+)
 from validate import validate_selection, validate_name, validate_length
 
 app = Flask(__name__)
@@ -47,14 +49,12 @@ def availability():
     validate_name(name)
 
     # get availability
-    days = next_seven_days()
-    availability = [[]]
-    if selection == 'providers':
-        availability = get_provider_availability(name, days, int(length))
-    else:
-        availability = get_operatory_availability(name, days, int(length))
+    dates = next_seven_dates()
+    weekdays = parse_weekdays(dates)
+    get_availability(name, weekdays, int(length), selection)
+    availability = get_availability(name, weekdays, int(length), selection)
 
-    return render_template('availability.html', name=name, days=days,
+    return render_template('availability.html', name=name, days=dates,
                            availability=availability)
 
 

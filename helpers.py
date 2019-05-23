@@ -1,9 +1,10 @@
 import requests
 import datetime as dt
+import pytz
 
 
 def http_request_appointments():
-    today = dt.datetime.today()
+    today = now_with_timezone()
     next_week = today + dt.timedelta(days=7)
     start = str(today.year) + '-' + str(today.month) + '-' + str(
         today.day) + 'T00:00:00.000Z'
@@ -93,7 +94,7 @@ def appointment_date(appointment):
 
 def within_week(appointment):
     appt = appointment_date(appointment)
-    now = dt.datetime.now().date()
+    now = now_with_timezone().date()
     next_week = now + dt.timedelta(days=7)
 
     if now <= appt < next_week:
@@ -103,14 +104,14 @@ def within_week(appointment):
 
 def appointment_index(appointment):
     appt = appointment_date(appointment)
-    delta = appt - dt.datetime.now().date()
+    delta = appt - now_with_timezone().date()
     return delta.days
 
 
 # method is a bit roundabout due to python timestamp nuances 
 def time_plus_duration(time, duration):
     assert (5 <= duration <= 60)
-    future = dt.datetime.combine(dt.datetime.now(), time) + dt.timedelta(minutes=duration)
+    future = dt.datetime.combine(now_with_timezone(), time) + dt.timedelta(minutes=duration)
     return future.time()
 
 
@@ -121,7 +122,7 @@ def str_to_time(str):
 
 
 # find if time overlaps with an appointment
-# linear solution, but can be done in O(logn) with binary search
+# this is linear solution, but can be done in O(logn) with binary search
 def overlapping_appointment(time, appointments):
     for idx, appointment in enumerate(appointments):
         start = str_to_time(appointment[0])
@@ -133,32 +134,62 @@ def overlapping_appointment(time, appointments):
     return None
 
 
-def get_provider_availability(name, weekday_month_days, length):
-
-    # save next 7 weekdays
-    weekdays = [date.split(' ')[0] for date in weekday_month_days]
+def get_working_hours(name, weekdays, selection):
 
     # save working hours, initialy (0,0)
     working_hours = {weekday: (0, 0) for weekday in weekdays}
     response = http_request_providers()
     for provider in response['data']:
-        # only save this providers working hours
-        if provider['name'] == name:
-            for working_hour in provider['working_hours']:
+
+        for working_hour in provider['working_hours']:
+
+            # provider name
+            if selection == 'providers':
+                found_name = provider['name']
+            # operatory name
+            else:
+                found_name = working_hour['operatory']['name']
+
+            # save hours if it matches with the name we're searching
+            if found_name == name:
                 working_hours[working_hour['day']] = (
                     parse_hour(working_hour['begin_time']),
-                    parse_hour(working_hour['end_time']))
+                    parse_hour(working_hour['end_time'])
+                )
 
-    # save week appointments
+    return working_hours
+
+
+# returns the appointments per day, in chronological order, for the next week
+def get_week_appointments(name, selection):
+
     week_appointments = [[] for i in range(7)]
     response = http_request_appointments()
+
     for appointment in response['data']:
-        if appointment['provider_name'] == name and within_week(appointment):
+
+        # provider vs. operatory name
+        if selection == 'providers':
+            found_name = appointment['provider_name']
+        else:
+            found_name = appointment['operatory_name']
+
+        # name is correct and appointment is upcoming
+        if found_name == name and within_week(appointment):
             index = appointment_index(appointment)
             week_appointments[index].append((
                 parse_time(appointment['start_time']),
                 parse_time(appointment['end_time'])
             ))
+
+    return week_appointments
+
+
+def get_availability(name, weekdays, length, selection):
+
+    # get working hours and appointments
+    working_hours = get_working_hours(name, weekdays, selection)
+    week_appointments = get_week_appointments(name, selection)
 
     # save next 7 days availability at defined interval lengths
     week_availability = []
@@ -176,6 +207,7 @@ def get_provider_availability(name, weekday_month_days, length):
             if overlapping_idx is not None:
                 time = str_to_time(day_appointments[overlapping_idx][1])
 
+            # otherwise update time by adding length
             else:
                 day_availability.append(str(time.hour) + ':' + str(time.minute).zfill(2))
                 time = time_plus_duration(time, length)
@@ -183,10 +215,6 @@ def get_provider_availability(name, weekday_month_days, length):
         week_availability.append(day_availability)
 
     return week_availability
-
-
-def get_operatory_availability(name, weekday_month_days, length):
-    return [[15, 25, 35, 45], [2, 2], [], [8, 18, 28], [], [1, 2, 3, 4, 5], [100]]
 
 
 # NOTE: python enum 0=Monday
@@ -221,13 +249,24 @@ def month_int_to_string(integer):
     return month.get(integer)
 
 
-def next_seven_days():
-    days = []
+def parse_weekdays(dates):
+    weekdays = [date.split(' ')[0] for date in dates]
+    return weekdays
+
+
+def next_seven_dates():
+    dates = []
     for i in range(7):
-        date = dt.datetime.today() + dt.timedelta(days=i)
+        date = now_with_timezone() + dt.timedelta(days=i)
         day = date.day
         month = month_int_to_string(date.month)
         weekday = weekday_int_to_string(date.weekday())
-        days.append(weekday + ' ' + month + ' ' + str(day))
+        dates.append(weekday + ' ' + month + ' ' + str(day))
 
-    return days
+    return dates
+
+
+def now_with_timezone():
+    # assume timezone should be NYC
+    tz = pytz.timezone('America/New_York')
+    return dt.datetime.now(tz)
